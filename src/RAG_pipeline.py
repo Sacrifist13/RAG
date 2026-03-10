@@ -1,8 +1,22 @@
 import sys
+import uuid
 from pathlib import Path
-from .reader import Reader
+from typing import List
+from pydantic import BaseModel, Field
+from .reader import Reader, MinimalSource
 from .indexer import Indexer
 from .retriever import Retriever
+
+
+class MinimalSearchResults(BaseModel):
+    question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    question: str = Field(min_length=1)
+    retrieved_sources: List[MinimalSource]
+
+
+class StudentSearchResults(BaseModel):
+    search_results: List[MinimalSearchResults] = Field(min_length=1)
+    k: int = Field(ge=1)
 
 
 class RAGPipeline:
@@ -39,5 +53,15 @@ class RAGPipeline:
 
         best_sources = retriever.retrieve(query, k)
 
-        for source in best_sources:
-            print(f"\n\n{source.content}\n")
+        if not best_sources:
+            return
+
+        search_result = MinimalSearchResults(
+            question=query, retrieved_sources=best_sources
+        )
+
+        final_output = StudentSearchResults(
+            search_results=[search_result], k=k
+        )
+
+        print(final_output.model_dump_json(indent=4))
