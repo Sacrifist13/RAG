@@ -16,7 +16,6 @@ class MinimalSource(BaseModel):
 class Reader:
 
     RED = "\033[91m"
-    YELLOW = "\033[93m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
 
@@ -67,6 +66,7 @@ class Reader:
                 f"{repo_path.name}{self.RESET}\n",
                 file=sys.stderr,
             )
+            return None
 
         datas_formated: List[MinimalSource] = []
 
