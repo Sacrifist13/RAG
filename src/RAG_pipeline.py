@@ -127,6 +127,9 @@ class RAGPipeline:
 
         retriever = Retriever()
 
+        if not retriever.sources:
+            return
+
         search_results: List[MinimalSearchResults] = []
 
         try:

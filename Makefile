@@ -23,9 +23,9 @@ debug:
 	$(PYTHON_CMD) -m pdb
 
 clean:
-	@echo "$(BOLD)🗑️  Cleaning up build artifacts and cache...$(RESET)"
-	rm -rf .mypy_cache __pycache__ src/__pycache__
-	@echo "\n$(BOLD)$(GREEN)🧹 Workspace is clean.$(RESET)"
+	@echo "$(BOLD)🗑️  Cleaning up cache...$(RESET)"
+	rm -rf .mypy_cache __pycache__ src/__pycache__ data/processed data/output
+	@echo "$(BOLD)$(GREEN)🧹 Cache is clean.$(RESET)"
 
 # lint:
 # 	@echo "$(BOLD)🔎 Running static code analysis (src only + silent imports)...$(RESET)"

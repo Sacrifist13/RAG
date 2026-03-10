@@ -89,7 +89,7 @@ class Reader:
 
                     datas_formated.append(
                         MinimalSource(
-                            file_path=str(file.relative_to(repo_path)),
+                            file_path=str(file),
                             first_character_index=start_index,
                             last_character_index=end_index,
                             content=sub_content,
