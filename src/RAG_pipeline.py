@@ -8,6 +8,7 @@ from pydantic import BaseModel, Field
 from .reader import Reader, MinimalSource
 from .indexer import Indexer
 from .retriever import Retriever
+from .generator import Generator
 
 
 class MinimalSearchResults(BaseModel):
@@ -16,9 +17,17 @@ class MinimalSearchResults(BaseModel):
     retrieved_sources: List[MinimalSource]
 
 
+class MinimalAnswer(MinimalSearchResults):
+    answer: str
+
+
 class StudentSearchResults(BaseModel):
     search_results: List[MinimalSearchResults] = Field(min_length=1)
     k: int = Field(ge=1)
+
+
+class StudentSearchResultsAndAnswer(StudentSearchResults):
+    search_results: List[MinimalAnswer]
 
 
 class RAGPipeline:
@@ -169,3 +178,77 @@ class RAGPipeline:
 
         print(f"Saved student_search_results to {file_path}")
         return
+
+    def answer(self, query: str, k: int = 10) -> None:
+        retriever = Retriever()
+
+        best_sources = retriever.retrieve(query, k)
+
+        if not best_sources:
+            return
+
+        llm = Generator()
+        raw_answer = llm.generate(query, best_sources)
+
+        if not raw_answer:
+            return
+
+        answer = MinimalAnswer(
+            question=query, retrieved_sources=best_sources, answer=raw_answer
+        )
+
+        print(answer.model_dump_json(indent=4))
+
+    def answer_dataset(
+        self,
+        student_search_results_path: str = (
+            "data/output/search_results/dataset_code_public.json"
+        ),
+        save_directory: str = "data/output/search_results_and_answer",
+    ):
+        data_path = Path(student_search_results_path)
+        save_path = Path(save_directory)
+
+        if not data_path.exists():
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas file not found: "
+                f"{data_path}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return
+
+        if not data_path.is_file():
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas file is a directory "
+                f"(expected json file): {data_path}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return
+
+        if save_path.exists() and save_path.is_file():
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Save directory is a file "
+                f"(expected directory): {save_path.name}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return
+
+        try:
+            with open(data_path, "r", encoding="utf-8") as f:
+                json_data = json.load(f)
+
+        except Exception:
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas file wrong format "
+                f"(.json required): {data_path}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return
+
+
+# /* uv run python -m student answer_dataset
+# --student_search_results_path data/output/search_results/dataset_docs_public.json
+# --save_directory data/output/search_results_and_answer
+# Loaded 100 questions from data/output/search_results/dataset_docs_public.json
+# Processed 100 of 100 questions
+# Saved student_search_results_and_answer to data/output/search_results_and_answer/dataset_docs_public.json */
