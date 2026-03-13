@@ -28,6 +28,6 @@ clean:
 	@echo "$(BOLD)$(GREEN)🧹 Cache is clean.$(RESET)"
 
 lint:
-	@echo "$(BOLD)🔎 Running static code analysis (src only + silent imports)...$(RESET)"
-	flake8 src/
-	mypy src/ --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+	@echo "$(BOLD)🔎 Running static code analysis...$(RESET)"
+	flake8 --exclude=.venv
+	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --exclude=.venv
