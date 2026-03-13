@@ -116,7 +116,7 @@ class Generator:
         all_answers: List[MinimalAnswer] = []
 
         for i in tqdm(range(0, len(datas), 2), desc="Processing answers"):
-            chunk = datas[i : i + 2]
+            chunk = datas[i: i + 2]
 
             try:
                 texts = [
@@ -172,7 +172,6 @@ class Generator:
                     f"{e}{self.RESET}\n",
                     file=sys.stderr,
                 )
-                # En cas d'erreur sur un batch → réponses vides pour ce chunk
                 for data in chunk:
                     all_answers.append(
                         MinimalAnswer(
