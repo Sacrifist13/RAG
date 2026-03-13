@@ -1,6 +1,7 @@
 import sys
 from typing import List
 from transformers import pipeline
+from tqdm import tqdm
 from .reader import MinimalSource
 
 
@@ -26,7 +27,7 @@ class Generator:
             )
             self.generator = None
 
-    def generate(self, query: str, sources: List[str]) -> str:
+    def generate(self, query: str, sources: List[MinimalSource]) -> str:
 
         if self.generator is None:
             return None
@@ -55,12 +56,11 @@ class Generator:
                 ),
             },
         ]
-
-        output_messages = self.generator(
-            messages, max_new_tokens=1252, max_length=None, do_sample=False
-        )[0]["generated_text"]
-
         try:
+            output_messages = self.generator(
+                messages, max_new_tokens=1024, max_length=None, do_sample=False
+            )[0]["generated_text"]
+
             raw_answer = output_messages[-1]["content"]
 
             if "</think>" in raw_answer:
@@ -77,3 +77,87 @@ class Generator:
                 file=sys.stderr,
             )
             return None
+
+    def generate_batch(
+        self, questions: List[str], sources: List[List[MinimalSource]]
+    ) -> List[str]:
+
+        if self.generator is None:
+            return [""] * len(questions)
+
+        all_messages = []
+
+        for question, source in zip(questions, sources):
+            context = "\n\n".join(
+                [
+                    f"--- Document {i+1} ---\n{s.content}"
+                    for i, s in enumerate(source)
+                    if isinstance(s, MinimalSource)
+                ]
+            )
+
+            messages = [
+                {
+                    "role": "system",
+                    "content": (
+                        "You are a helpful coding assistant. Answer the user's"
+                        " question based ONLY on the provided documents. "
+                        "Be concise. If "
+                        "the answer is not in the documents, just say you "
+                        "don't know."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": (
+                        f"Context documents:\n{context}\n\nQuestion: "
+                        f"{question}"
+                    ),
+                },
+            ]
+
+            all_messages.append(messages)
+
+        if self.generator.tokenizer.pad_token_id is None:
+            self.generator.tokenizer.pad_token_id = (
+                self.generator.tokenizer.eos_token_id
+            )
+
+        self.generator.tokenizer.padding_side = "left"
+
+        final_answers = []
+        batch_size = 16
+
+        try:
+
+            for i in tqdm(
+                range(0, len(all_messages), batch_size),
+                desc="Generating AI answers",
+            ):
+                chunk = all_messages[i : i + batch_size]
+                batch_outputs = self.generator(
+                    chunk,
+                    max_new_tokens=64,
+                    max_length=None,
+                    do_sample=False,
+                    batch_size=batch_size,
+                )
+
+                for output in batch_outputs:
+                    raw_answer = output[0]["generated_text"][-1]["content"]
+                    if "</think>" in raw_answer:
+                        final_answer = raw_answer.split("</think>")[-1].strip()
+                    else:
+                        final_answer = raw_answer.strip()
+
+                    final_answers.append(final_answer)
+
+            return final_answers
+
+        except Exception as e:
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Batch generation failed: "
+                f"{e}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return [""] * len(questions)

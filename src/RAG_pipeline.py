@@ -237,18 +237,67 @@ class RAGPipeline:
             with open(data_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
+            search_results: List[MinimalAnswer] = []
+            llm = Generator()
+
+            nb_questions = len(json_data["search_results"])
+            processed_questions = 0
+
+            print(f"Loaded {nb_questions} questions from {data_path}")
+
+            all_sources = []
+            all_questions = []
+
+            for msr in json_data["search_results"]:
+                all_sources.append(
+                    [MinimalSource(**s) for s in msr["retrieved_sources"]]
+                )
+                all_questions.append(msr["question"])
+
+            all_answers = llm.generate_batch(all_questions, all_sources)
+
+            for msr, best_sources, answer in tqdm(
+                zip(json_data["search_results"], all_sources, all_answers),
+                desc="Processing answers",
+            ):
+                search_results.append(
+                    MinimalAnswer(
+                        question_id=msr["question_id"],
+                        question=msr["question"],
+                        retrieved_sources=best_sources,
+                        answer=answer,
+                    )
+                )
+                processed_questions += 1
+
+            print(
+                f"Processed {processed_questions} of {nb_questions} questions"
+            )
+
+            student_search_results_and_answer = StudentSearchResultsAndAnswer(
+                search_results=search_results, k=json_data["k"]
+            )
+
+            file_path = save_path / data_path.name
+
+            with open(file_path, "w", encoding="utf-8") as f:
+                json_string = (
+                    student_search_results_and_answer.model_dump_json(indent=4)
+                )
+                f.write(json_string)
+
+                print(
+                    f"Saved student_search_results_and_answer to {file_path}"
+                )
+                return
+
         except Exception:
             print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas file wrong format "
-                f"(.json required): {data_path}{self.RESET}\n",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Generation Search Results "
+                "and Answer file "
+                "make sure datas file is a '.json' with StudentSearchResults "
+                "Class format: "
+                f"{data_path}{self.RESET}\n",
                 file=sys.stderr,
             )
             return
-
-
-# /* uv run python -m student answer_dataset
-# --student_search_results_path data/output/search_results/dataset_docs_public.json
-# --save_directory data/output/search_results_and_answer
-# Loaded 100 questions from data/output/search_results/dataset_docs_public.json
-# Processed 100 of 100 questions
-# Saved student_search_results_and_answer to data/output/search_results_and_answer/dataset_docs_public.json */
