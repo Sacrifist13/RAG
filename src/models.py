@@ -7,7 +7,7 @@ class MinimalSource(BaseModel):
     file_path: str = Field(min_length=1)
     first_character_index: int = Field(ge=0)
     last_character_index: int = Field(ge=0)
-    content: str = Field(min_length=1)
+    content: str = Field(min_length=1, default="")
 
 
 class MinimalSearchResults(BaseModel):

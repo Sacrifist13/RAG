@@ -7,6 +7,7 @@ from .reader import Reader
 from .indexer import Indexer
 from .retriever import Retriever
 from .generator import Generator
+from .evaluate import Evaluator
 from .models import (
     MinimalSearchResults,
     StudentSearchResults,
@@ -244,3 +245,19 @@ class RAGPipeline:
                 file=sys.stderr,
             )
             return None
+
+    def evaluate(
+        self,
+        student_answer_path: str,
+        dataset_path: str,
+        k: int = 10,
+        max_context_length: int = 2000,
+    ) -> None:
+        evaluator = Evaluator(
+            student_answer_path, dataset_path, max_context_length
+        )
+
+        if not evaluator.compared:
+            return
+
+        evaluator.evaluate(k)
