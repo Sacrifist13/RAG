@@ -11,7 +11,7 @@ class Generator:
     BOLD = "\033[1m"
     RESET = "\033[0m"
 
-    def __init__(self, model_name="Qwen/Qwen3-0.6B") -> None:
+    def __init__(self, model_name: str = "Qwen/Qwen3-0.6B") -> None:
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_name, padding_side="left"
@@ -68,7 +68,7 @@ class Generator:
     def generate(self, query: str, sources: List[MinimalSource]) -> str:
 
         if self.model is None:
-            return None
+            return ""
 
         message = self.generate_message(query, sources)
 
@@ -96,15 +96,15 @@ class Generator:
             )
 
             if "</think>" in raw_answer:
-                return raw_answer.split("</think>")[-1].strip()
-            return raw_answer.strip()
+                return str(raw_answer.split("</think>")[-1].strip())
+            return str(raw_answer.strip())
 
         except Exception as e:
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
-            return None
+            return ""
 
     def generate_batch(
         self,
@@ -177,6 +177,7 @@ class Generator:
                         MinimalAnswer(
                             question_id=data.question_id,
                             question=data.question,
+                            retrieved_sources=data.retrieved_sources,
                             answer="",
                         )
                     )

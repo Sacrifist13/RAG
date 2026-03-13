@@ -182,7 +182,7 @@ class RAGPipeline:
             "data/output/search_results/dataset_code_public.json"
         ),
         save_directory: str = "data/output/search_results_and_answer",
-    ):
+    ) -> None:
         data_path = Path(student_search_results_path)
         save_path = Path(save_directory)
 
@@ -215,12 +215,15 @@ class RAGPipeline:
                 json_data = json.load(f)
                 search_results_datas = StudentSearchResults(**json_data)
 
-            search_results_answers: List[MinimalAnswer] = []
+            search_results_answers: List[MinimalAnswer] | None = []
             llm = Generator()
 
             search_results_answers = llm.generate_batch(
                 search_results_datas.search_results
             )
+
+            if not search_results_answers:
+                return
 
             student_search_results_and_answer = StudentSearchResultsAndAnswer(
                 search_results=search_results_answers, k=search_results_datas.k
@@ -244,7 +247,7 @@ class RAGPipeline:
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
-            return None
+            return
 
     def evaluate(
         self,

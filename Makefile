@@ -27,7 +27,7 @@ clean:
 	rm -rf .mypy_cache __pycache__ src/__pycache__ data/processed data/output
 	@echo "$(BOLD)$(GREEN)🧹 Cache is clean.$(RESET)"
 
-# lint:
-# 	@echo "$(BOLD)🔎 Running static code analysis (src only + silent imports)...$(RESET)"
-# 	flake8 --exclude=.venv,llm_sdk/__init__.py
-# 	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs
+lint:
+	@echo "$(BOLD)🔎 Running static code analysis (src only + silent imports)...$(RESET)"
+	flake8 src/
+	mypy src/ --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs

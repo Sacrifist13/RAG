@@ -161,11 +161,14 @@ class Evaluator:
 
         return found / len(data_sources)
 
-    def evaluate(self, k: int) -> str:
+    def evaluate(self, k: int) -> None:
+        if not self.compared:
+            return
+
         cutoff = [1, 3, 5, k]
         print("Evaluation Results")
         print("========================================")
-        print(f"Questions evaluated: {len(self.compared)}")
+        print(f"Questions evaluated: {len(self.compared.keys())}")
         for c in cutoff:
             scores = []
 
