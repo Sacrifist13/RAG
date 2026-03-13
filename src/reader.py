@@ -2,15 +2,8 @@ import sys
 from pathlib import Path
 from tqdm import tqdm
 from typing import List
-from pydantic import BaseModel, Field
 from langchain_text_splitters import RecursiveCharacterTextSplitter, Language
-
-
-class MinimalSource(BaseModel):
-    file_path: str = Field(min_length=1)
-    first_character_index: int = Field(ge=0)
-    last_character_index: int = Field(ge=0)
-    content: str = Field(min_length=1)
+from .models import MinimalSource
 
 
 class Reader:

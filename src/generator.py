@@ -1,8 +1,9 @@
 import sys
-from typing import List
-from transformers import pipeline
+import torch
 from tqdm import tqdm
-from .reader import MinimalSource
+from typing import List, Dict
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from .models import MinimalSource, MinimalSearchResults, MinimalAnswer
 
 
 class Generator:
@@ -12,30 +13,35 @@ class Generator:
 
     def __init__(self, model_name="Qwen/Qwen3-0.6B") -> None:
         try:
-            self.generator = pipeline(
-                "text-generation",
-                model=model_name,
-                dtype="auto",
-                device_map="auto",
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_name, padding_side="left"
             )
+            if self.tokenizer.pad_token_id is None:
+                self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
-        except Exception:
+            self.model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                torch_dtype=torch.bfloat16,
+                low_cpu_mem_usage=True,
+            )
+            self.model.eval()
+
+        except Exception as e:
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] Loading llm model: "
-                f"{model_name}{self.RESET}\n",
+                f"{model_name} - {e}{self.RESET}\n",
                 file=sys.stderr,
             )
-            self.generator = None
+            self.model = None
+            self.tokenizer = None
 
-    def generate(self, query: str, sources: List[MinimalSource]) -> str:
-
-        if self.generator is None:
-            return None
-
+    def generate_message(
+        self, question: str, sources: List[MinimalSource]
+    ) -> List[Dict[str, str]]:
         context = "\n\n".join(
             [
-                f"--- Document {i+1} ---\n{s.content}"
-                for i, s in enumerate(sources)
+                f"--- Document {i+1} ---\n{s.content[:500]}"
+                for i, s in enumerate(sources[:3])
                 if isinstance(s, MinimalSource)
             ]
         )
@@ -45,119 +51,135 @@ class Generator:
                 "role": "system",
                 "content": (
                     "You are a helpful coding assistant. Answer the user's"
-                    " question based ONLY on the provided documents. If the"
-                    " answer is not in the documents, just say you don't know."
+                    " question based ONLY on the provided documents."
+                    "/no_think"
                 ),
             },
             {
                 "role": "user",
                 "content": (
-                    f"Context documents:\n{context}\n\nQuestion: {query}"
+                    f"Context documents:\n{context}\n\nQuestion: {question}"
                 ),
             },
         ]
-        try:
-            output_messages = self.generator(
-                messages, max_new_tokens=1024, max_length=None, do_sample=False
-            )[0]["generated_text"]
 
-            raw_answer = output_messages[-1]["content"]
+        return messages
+
+    def generate(self, query: str, sources: List[MinimalSource]) -> str:
+
+        if self.model is None:
+            return None
+
+        message = self.generate_message(query, sources)
+
+        try:
+            text = self.tokenizer.apply_chat_template(
+                message,
+                tokenize=False,
+                add_generation_prompt=True,
+            )
+
+            inputs = self.tokenizer(text, return_tensors="pt")
+
+            with torch.no_grad():
+                output_ids = self.model.generate(
+                    **inputs,
+                    max_new_tokens=512,
+                    do_sample=False,
+                    pad_token_id=self.tokenizer.pad_token_id,
+                )
+
+            input_length = inputs["input_ids"].shape[1]
+            new_tokens = output_ids[0][input_length:]
+            raw_answer = self.tokenizer.decode(
+                new_tokens, skip_special_tokens=True
+            )
 
             if "</think>" in raw_answer:
-                final_answer = raw_answer.split("</think>")[-1].strip()
-            else:
-                final_answer = raw_answer.strip()
+                return raw_answer.split("</think>")[-1].strip()
+            return raw_answer.strip()
 
-            return final_answer
-
-        except Exception:
+        except Exception as e:
             print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] generated answer check "
-                f"connection and retry{self.RESET}\n",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
             return None
 
     def generate_batch(
-        self, questions: List[str], sources: List[List[MinimalSource]]
-    ) -> List[str]:
+        self,
+        datas: List[MinimalSearchResults],
+    ) -> List[MinimalAnswer] | None:
+        if not self.model:
+            return None
 
-        if self.generator is None:
-            return [""] * len(questions)
+        all_answers: List[MinimalAnswer] = []
 
-        all_messages = []
+        for i in tqdm(range(0, len(datas), 2), desc="Processing answers"):
+            chunk = datas[i : i + 2]
 
-        for question, source in zip(questions, sources):
-            context = "\n\n".join(
-                [
-                    f"--- Document {i+1} ---\n{s.content}"
-                    for i, s in enumerate(source)
-                    if isinstance(s, MinimalSource)
+            try:
+                texts = [
+                    self.tokenizer.apply_chat_template(
+                        self.generate_message(
+                            data.question, data.retrieved_sources
+                        ),
+                        tokenize=False,
+                        add_generation_prompt=True,
+                    )
+                    for data in chunk
+                    if isinstance(data, MinimalSearchResults)
                 ]
-            )
 
-            messages = [
-                {
-                    "role": "system",
-                    "content": (
-                        "You are a helpful coding assistant. Answer the user's"
-                        " question based ONLY on the provided documents. "
-                        "Be concise. If "
-                        "the answer is not in the documents, just say you "
-                        "don't know."
-                    ),
-                },
-                {
-                    "role": "user",
-                    "content": (
-                        f"Context documents:\n{context}\n\nQuestion: "
-                        f"{question}"
-                    ),
-                },
-            ]
-
-            all_messages.append(messages)
-
-        if self.generator.tokenizer.pad_token_id is None:
-            self.generator.tokenizer.pad_token_id = (
-                self.generator.tokenizer.eos_token_id
-            )
-
-        self.generator.tokenizer.padding_side = "left"
-
-        final_answers = []
-        batch_size = 16
-
-        try:
-
-            for i in tqdm(
-                range(0, len(all_messages), batch_size),
-                desc="Generating AI answers",
-            ):
-                chunk = all_messages[i : i + batch_size]
-                batch_outputs = self.generator(
-                    chunk,
-                    max_new_tokens=64,
-                    max_length=None,
-                    do_sample=False,
-                    batch_size=batch_size,
+                inputs = self.tokenizer(
+                    texts,
+                    return_tensors="pt",
+                    padding=True,
+                    truncation=True,
+                    max_length=1024,
                 )
+                with torch.no_grad():
+                    output_ids = self.model.generate(
+                        **inputs,
+                        max_new_tokens=128,
+                        do_sample=False,
+                        pad_token_id=self.tokenizer.pad_token_id,
+                    )
 
-                for output in batch_outputs:
-                    raw_answer = output[0]["generated_text"][-1]["content"]
-                    if "</think>" in raw_answer:
-                        final_answer = raw_answer.split("</think>")[-1].strip()
-                    else:
-                        final_answer = raw_answer.strip()
+                input_length = inputs["input_ids"].shape[1]
 
-                    final_answers.append(final_answer)
+                for data, output in zip(chunk, output_ids):
+                    new_tokens = output[input_length:]
+                    raw = self.tokenizer.decode(
+                        new_tokens, skip_special_tokens=True
+                    )
 
-            return final_answers
+                    if "</think>" in raw:
+                        raw = raw.split("</think>")[-1].strip()
 
-        except Exception as e:
-            print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Batch generation failed: "
-                f"{e}{self.RESET}\n",
-                file=sys.stderr,
-            )
-            return [""] * len(questions)
+                    all_answers.append(
+                        MinimalAnswer(
+                            question_id=data.question_id,
+                            question=data.question,
+                            retrieved_sources=data.retrieved_sources,
+                            answer=raw.strip(),
+                        )
+                    )
+
+            except Exception as e:
+                print(
+                    f"\n{self.RED}{self.BOLD}❌ [ERROR] Batch {i//2 + 1}: "
+                    f"{e}{self.RESET}\n",
+                    file=sys.stderr,
+                )
+                # En cas d'erreur sur un batch → réponses vides pour ce chunk
+                for data in chunk:
+                    all_answers.append(
+                        MinimalAnswer(
+                            question_id=data.question_id,
+                            question=data.question,
+                            answer="",
+                        )
+                    )
+
+        return all_answers

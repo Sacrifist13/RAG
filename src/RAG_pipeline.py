@@ -1,33 +1,20 @@
 import sys
-import uuid
 import json
 from tqdm import tqdm
 from pathlib import Path
 from typing import List
-from pydantic import BaseModel, Field
-from .reader import Reader, MinimalSource
+from .reader import Reader
 from .indexer import Indexer
 from .retriever import Retriever
 from .generator import Generator
-
-
-class MinimalSearchResults(BaseModel):
-    question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    question: str = Field(min_length=1)
-    retrieved_sources: List[MinimalSource]
-
-
-class MinimalAnswer(MinimalSearchResults):
-    answer: str
-
-
-class StudentSearchResults(BaseModel):
-    search_results: List[MinimalSearchResults] = Field(min_length=1)
-    k: int = Field(ge=1)
-
-
-class StudentSearchResultsAndAnswer(StudentSearchResults):
-    search_results: List[MinimalAnswer]
+from .models import (
+    MinimalSearchResults,
+    StudentSearchResults,
+    RagDataset,
+    UnansweredQuestion,
+    MinimalAnswer,
+    StudentSearchResultsAndAnswer,
+)
 
 
 class RAGPipeline:
@@ -116,20 +103,12 @@ class RAGPipeline:
             with open(data_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
 
-        except Exception:
-            print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas file wrong format "
-                f"(.json required): {data_path}{self.RESET}\n",
-                file=sys.stderr,
-            )
-            return
+            rag_dataset = RagDataset(**json_data)
+            questions: List[UnansweredQuestion] = rag_dataset.rag_questions
 
-        if "rag_questions" not in json_data:
+        except Exception as e:
             print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Invalid dataset format: "
-                f"{data_path}{self.RESET}\n\n"
-                f"{self.YELLOW} - Expected a JSON object containing the root "
-                f"key 'rag_questions'.{self.RESET}",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
             return
@@ -142,28 +121,25 @@ class RAGPipeline:
         search_results: List[MinimalSearchResults] = []
 
         try:
-            for question in tqdm(
-                json_data["rag_questions"], desc="Processing questions"
-            ):
-                best_sources = retriever.retrieve(question["question"], k)
+            for question in tqdm(questions, desc="Processing questions"):
+                best_sources = retriever.retrieve(question.question, k)
 
                 if not best_sources:
                     continue
 
                 search_results.append(
                     MinimalSearchResults(
-                        question_id=question["question_id"],
-                        question=question["question"],
+                        question_id=question.question_id,
+                        question=question.question,
                         retrieved_sources=best_sources,
                     )
                 )
-        except Exception:
+        except Exception as e:
             print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Searching results error"
-                f"{data_path}{self.RESET}",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
-            return
+            return None
 
         student_search_results = StudentSearchResults(
             search_results=search_results, k=k
@@ -236,48 +212,19 @@ class RAGPipeline:
         try:
             with open(data_path, "r", encoding="utf-8") as f:
                 json_data = json.load(f)
+                search_results_datas = StudentSearchResults(**json_data)
 
-            search_results: List[MinimalAnswer] = []
+            search_results_answers: List[MinimalAnswer] = []
             llm = Generator()
 
-            nb_questions = len(json_data["search_results"])
-            processed_questions = 0
-
-            print(f"Loaded {nb_questions} questions from {data_path}")
-
-            all_sources = []
-            all_questions = []
-
-            for msr in json_data["search_results"]:
-                all_sources.append(
-                    [MinimalSource(**s) for s in msr["retrieved_sources"]]
-                )
-                all_questions.append(msr["question"])
-
-            all_answers = llm.generate_batch(all_questions, all_sources)
-
-            for msr, best_sources, answer in tqdm(
-                zip(json_data["search_results"], all_sources, all_answers),
-                desc="Processing answers",
-            ):
-                search_results.append(
-                    MinimalAnswer(
-                        question_id=msr["question_id"],
-                        question=msr["question"],
-                        retrieved_sources=best_sources,
-                        answer=answer,
-                    )
-                )
-                processed_questions += 1
-
-            print(
-                f"Processed {processed_questions} of {nb_questions} questions"
+            search_results_answers = llm.generate_batch(
+                search_results_datas.search_results
             )
 
             student_search_results_and_answer = StudentSearchResultsAndAnswer(
-                search_results=search_results, k=json_data["k"]
+                search_results=search_results_answers, k=search_results_datas.k
             )
-
+            save_path.mkdir(parents=True, exist_ok=True)
             file_path = save_path / data_path.name
 
             with open(file_path, "w", encoding="utf-8") as f:
@@ -291,13 +238,9 @@ class RAGPipeline:
                 )
                 return
 
-        except Exception:
+        except Exception as e:
             print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Generation Search Results "
-                "and Answer file "
-                "make sure datas file is a '.json' with StudentSearchResults "
-                "Class format: "
-                f"{data_path}{self.RESET}\n",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
-            return
+            return None

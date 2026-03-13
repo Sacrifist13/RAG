@@ -46,14 +46,13 @@ class Retriever:
             self.sources = [MinimalSource(**c) for c in raw_dicts]
             self.retriever = bm25s.BM25.load(index_dir, load_corpus=False)
 
-        except Exception:
+        except Exception as e:
             print(
-                f"{self.RED}{self.BOLD}❌ [ERROR] Command 'search': "
-                f"{self.RESET}\n\n",
-                f"{self.YELLOW} - Check index and chunks dir{self.RESET}",
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
                 file=sys.stderr,
             )
             self.sources = None
+            return
 
     def retrieve(self, query: str, k: int) -> List[MinimalSource] | None:
         if self.sources is None:
