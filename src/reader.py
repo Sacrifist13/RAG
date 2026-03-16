@@ -49,8 +49,6 @@ class Reader:
             file
             for file in repo_path.rglob("*")
             if file.is_file()
-            if "__pycache__" not in file.parts
-            if ".git" not in file.parts
         ]
 
         if not files:

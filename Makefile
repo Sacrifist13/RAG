@@ -1,4 +1,4 @@
-PYTHON_CMD  := uv run python -m student index
+PYTHON_CMD  := uv run python -m src index
 
 BOLD   := \033[1m
 RESET  := \033[0m

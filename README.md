@@ -139,20 +139,20 @@ The project is managed via the `uv` package manager and executed via a python mo
 
 **2. Indexing the Knowledge Base**
     
-    uv run python -m student index
+    uv run python -m src index
 
 **3. Searching for a Query**
     
-    uv run python -m student search "How to configure OpenAI server?" --k 5
+    uv run python -m src search "How to configure OpenAI server?" --k 5
 
 **4. End-to-End Answer Generation**
     
-    uv run python -m student answer "What method needs to be overridden in BaseProcessingInfo?" --k 5
+    uv run python -m src answer "What method needs to be overridden in BaseProcessingInfo?" --k 5
 
 **5. Evaluating Dataset Accuracy**
     
-    uv run python -m student search_dataset --dataset_path datasets_public/public/UnansweredQuestions/dataset_code_public.json
-    uv run python -m student evaluate --student_answer_path data/output/search_results/dataset_code_public.json --dataset_path datasets_public/public/AnsweredQuestions/dataset_code_public.json
+    uv run python -m src search_dataset --dataset_path datasets_public/public/UnansweredQuestions/dataset_code_public.json
+    uv run python -m src evaluate --student_answer_path data/output/search_results/dataset_code_public.json --dataset_path datasets_public/public/AnsweredQuestions/dataset_code_public.json
 
 ---
 
