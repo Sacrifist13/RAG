@@ -7,6 +7,23 @@ from .models import MinimalSource
 
 
 class Reader:
+    """
+    Reader class for splitting files in a repo into minimal sources.
+
+    Methods
+    -------
+    read_split(repo_path: Path, max_chunk_size: int) ->
+    List[MinimalSource] | None
+        Splits files in repo_path into chunks of max_chunk_size.
+
+        Args:
+            repo_path (Path): Path to the repository.
+            max_chunk_size (int): Max size of each chunk.
+
+        Returns:
+            List[MinimalSource] | None: List of chunked sources or None if
+            empty.
+    """
 
     RED = "\033[91m"
     BOLD = "\033[1m"
@@ -15,6 +32,17 @@ class Reader:
     def read_split(
         self, repo_path: Path, max_chunk_size: int
     ) -> List[MinimalSource] | None:
+        """
+        Splits files in a repo into chunks for processing.
+
+        Args:
+            repo_path (Path): Path to the repository directory.
+            max_chunk_size (int): Maximum size of each chunk.
+
+        Returns:
+            List[MinimalSource] | None: List of chunked sources or None if
+            empty.
+        """
 
         overlap = int(max_chunk_size * (10 / 100))
 
@@ -45,11 +73,7 @@ class Reader:
             add_start_index=True,
         )
 
-        files = [
-            file
-            for file in repo_path.rglob("*")
-            if file.is_file()
-        ]
+        files = [file for file in repo_path.rglob("*") if file.is_file()]
 
         if not files:
             print(

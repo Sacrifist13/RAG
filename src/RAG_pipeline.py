@@ -19,6 +19,35 @@ from .models import (
 
 
 class RAGPipeline:
+    """
+    RAGPipeline provides methods for indexing, searching, answering, and
+    evaluating using a Retrieval-Augmented Generation (RAG) workflow.
+
+    Methods
+    -------
+    index(max_chunk_size: int = 2000) -> None
+        Indexes raw data for retrieval.
+
+    search(query: str, k: int = 10) -> None
+        Retrieves top-k sources for a given query.
+
+    search_dataset(dataset_path: str, k: int = 10,
+                   save_directory: str = "data/output/search_results") -> None
+        Searches a dataset of questions and saves results.
+
+    answer(query: str, k: int = 10) -> None
+        Generates an answer for a query using retrieved sources.
+
+    answer_dataset(student_search_results_path: str,
+                   save_directory: str =
+                   "data/output/search_results_and_answer"
+                   ) -> None
+        Generates answers for a dataset of search results.
+
+    evaluate(student_answer_path: str, dataset_path: str, k: int = 10,
+             max_context_length: int = 2000) -> None
+        Evaluates generated answers against a reference dataset.
+    """
 
     RED = "\033[91m"
     BOLD = "\033[1m"
@@ -26,6 +55,15 @@ class RAGPipeline:
     RESET = "\033[0m"
 
     def index(self, max_chunk_size: int = 2000) -> None:
+        """
+        Indexes and saves processed data from the raw data directory.
+
+        Args:
+            max_chunk_size (int): Maximum size of data chunks to process.
+
+        Returns:
+            None
+        """
 
         repo_path = Path("data/raw")
 
@@ -49,6 +87,17 @@ class RAGPipeline:
         print("Ingestion complete! Indices saved under data/processed/")
 
     def search(self, query: str, k: int = 10) -> None:
+        """
+        Searches for relevant sources given a query.
+
+        Args:
+            query (str): The search query.
+            k (int, optional): Number of top sources to retrieve. Defaults to
+            10.
+
+        Returns:
+            None
+        """
         retriever = Retriever()
 
         best_sources = retriever.retrieve(query, k)
@@ -72,6 +121,19 @@ class RAGPipeline:
         k: int = 10,
         save_directory: str = "data/output/search_results",
     ) -> None:
+        """
+        Searches a dataset for relevant sources for each question.
+
+        Args:
+            dataset_path (str): Path to the input JSON dataset file.
+            k (int, optional): Number of sources to retrieve per question.
+            Default is 10.
+            save_directory (str, optional): Directory to save results.
+            Default is "data/output/search_results".
+
+        Returns:
+            None
+        """
 
         data_path = Path(dataset_path)
         save_path = Path(save_directory)
@@ -157,6 +219,16 @@ class RAGPipeline:
         return
 
     def answer(self, query: str, k: int = 10) -> None:
+        """
+        Answers a query using retrieved sources and a language model.
+
+        Args:
+            query (str): The input question to answer.
+            k (int, optional): Number of sources to retrieve. Defaults to 10.
+
+        Returns:
+            None
+        """
         retriever = Retriever()
 
         best_sources = retriever.retrieve(query, k)
@@ -183,6 +255,16 @@ class RAGPipeline:
         ),
         save_directory: str = "data/output/search_results_and_answer",
     ) -> None:
+        """
+        Answers a dataset using LLM and saves results to a directory.
+
+        Args:
+            student_search_results_path (str): Path to input JSON file.
+            save_directory (str): Directory to save output JSON.
+
+        Returns:
+            None
+        """
         data_path = Path(student_search_results_path)
         save_path = Path(save_directory)
 
@@ -256,6 +338,19 @@ class RAGPipeline:
         k: int = 10,
         max_context_length: int = 2000,
     ) -> None:
+        """
+        Evaluates student answers using the Evaluator class.
+
+        Args:
+            student_answer_path (str): Path to student answers file.
+            dataset_path (str): Path to dataset file.
+            k (int, optional): Top-k results to consider. Defaults to 10.
+            max_context_length (int, optional): Max context length.
+            Defaults to 2000.
+
+        Returns:
+            None
+        """
         evaluator = Evaluator(
             student_answer_path, dataset_path, max_context_length
         )

@@ -7,6 +7,24 @@ from .reader import MinimalSource
 
 
 class Retriever:
+    """
+    Retriever loads sources and BM25 index for document retrieval.
+
+    Attributes:
+        sources (list[MinimalSource] | None): Loaded document sources.
+        retriever (bm25s.BM25): BM25 retriever instance.
+
+    Methods:
+        retrieve(query: str, k: int) -> list[MinimalSource] | None:
+            Retrieve top-k relevant sources for a given query.
+
+    Args:
+        query (str): Query string to search for.
+        k (int): Number of top results to return.
+
+    Returns:
+        list[MinimalSource] | None: Top-k sources or None if not loaded.
+    """
 
     RED = "\033[91m"
     BOLD = "\033[1m"
@@ -14,6 +32,13 @@ class Retriever:
     RESET = "\033[0m"
 
     def __init__(self) -> None:
+        """
+        Initializes the retriever by loading sources and BM25 index.
+
+        Raises:
+            Prints error and sets self.sources to None if files are missing or
+            loading fails.
+        """
         chunks_path = Path("data/processed/chunks/sources.json")
         index_dir = Path("data/processed/bm25_index")
 
@@ -55,6 +80,16 @@ class Retriever:
             return
 
     def retrieve(self, query: str, k: int) -> List[MinimalSource] | None:
+        """
+        Retrieve top-k relevant MinimalSource objects for a given query.
+
+        Args:
+            query (str): The search query.
+            k (int): Number of top results to return.
+
+        Returns:
+            list[MinimalSource] | None: Top-k sources or None if no sources.
+        """
         if self.sources is None:
             return None
 

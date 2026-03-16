@@ -7,11 +7,56 @@ from .models import MinimalSource, MinimalSearchResults, MinimalAnswer
 
 
 class Generator:
+    """
+    Generator class for LLM-based answer generation from provided sources.
+
+    Args:
+        model_name (str): Name of the pretrained LLM model.
+
+    Attributes:
+        tokenizer: Tokenizer for the LLM.
+        model: LLM model instance.
+
+    Methods:
+        generate_message(question, sources):
+            Build chat messages from question and sources.
+            Args:
+                question (str): User's question.
+                sources (List[MinimalSource]): Source docs.
+            Returns:
+                List[Dict[str, str]]: Chat messages.
+
+        generate(query, sources):
+            Generate answer for a single query.
+            Args:
+                query (str): User's question.
+                sources (List[MinimalSource]): Source docs.
+            Returns:
+                str: Generated answer.
+
+        generate_batch(datas):
+            Generate answers for a batch of queries.
+            Args:
+                datas (List[MinimalSearchResults]): Batch input.
+            Returns:
+                List[MinimalAnswer] | None: Answers or None if model not
+                loaded.
+    """
+
     RED = "\033[91m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
 
     def __init__(self, model_name: str = "Qwen/Qwen3-0.6B") -> None:
+        """
+        Initializes tokenizer and model for causal language modeling.
+
+        Args:
+            model_name (str): Name or path of the pretrained model.
+
+        Returns:
+            None
+        """
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_name, padding_side="left"
@@ -38,6 +83,16 @@ class Generator:
     def generate_message(
         self, question: str, sources: List[MinimalSource]
     ) -> List[Dict[str, str]]:
+        """
+        Generate chat messages for answering a question using given sources.
+
+        Args:
+            question (str): The user's question.
+            sources (List[MinimalSource]): List of source documents.
+
+        Returns:
+            List[Dict[str, str]]: Chat messages for the assistant.
+        """
         context = "\n\n".join(
             [
                 f"--- Document {i+1} ---\n{s.content[:500]}"
@@ -66,6 +121,16 @@ class Generator:
         return messages
 
     def generate(self, query: str, sources: List[MinimalSource]) -> str:
+        """
+        Generate a response to a query using provided sources.
+
+        Args:
+            query (str): The input question or prompt.
+            sources (List[MinimalSource]): List of context sources.
+
+        Returns:
+            str: Generated answer or empty string on failure.
+        """
 
         if self.model is None:
             return ""
@@ -110,6 +175,15 @@ class Generator:
         self,
         datas: List[MinimalSearchResults],
     ) -> List[MinimalAnswer] | None:
+        """
+        Generate answers for a batch of search results.
+
+        Args:
+            datas (List[MinimalSearchResults]): Batch of search results.
+
+        Returns:
+            List[MinimalAnswer] | None: Generated answers or None if no model.
+        """
         if not self.model:
             return None
 

@@ -6,6 +6,20 @@ from .reader import MinimalSource
 
 
 class Indexer:
+    """
+    Indexer class for saving and indexing document sources.
+
+    Methods
+    -------
+    index_save(sources: List[MinimalSource]) -> None
+        Save sources as JSON and build BM25 index.
+
+    Args:
+        sources (List[MinimalSource]): List of source objects to index.
+
+    Returns:
+        None
+    """
     def index_save(self, sources: List[MinimalSource]) -> None:
         chunks_dir = Path("data/processed/chunks")
         index_dir = Path("data/processed/bm25_index")

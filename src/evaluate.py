@@ -11,6 +11,18 @@ from .models import (
 
 
 class Evaluator:
+    """
+    Evaluator for validating and scoring student answers.
+
+    Args:
+        student_answer_path (str): Path to student answers file.
+        dataset_path (str): Path to reference dataset file.
+        max_context_length (int): Max allowed context length.
+
+    Methods:
+        evaluate(k: int): Evaluate recall@k for student answers.
+    """
+
     RED = "\033[91m"
     BOLD = "\033[1m"
     RESET = "\033[0m"
@@ -21,6 +33,19 @@ class Evaluator:
         dataset_path: str,
         max_context_length: int,
     ) -> None:
+        """
+        Initializes the evaluation object by validating and loading student
+        answers and dataset files.
+
+        Args:
+            student_answer_path (str): Path to the student answers JSON file.
+            dataset_path (str): Path to the dataset JSON file.
+            max_context_length (int): Maximum allowed length for source
+            content.
+
+        Returns:
+            None
+        """
         self.compared: Dict[str, Dict[str, List[MinimalSource]]] | None = {}
 
         valid: bool = True
@@ -124,6 +149,19 @@ class Evaluator:
     def _check_overlap(
         self, r_start: int, r_end: int, c_start: int, c_end: int
     ) -> float:
+        """
+        Calculate the proportion of overlap between two ranges.
+
+        Args:
+            r_start (int): Start of the reference range.
+            r_end (int): End of the reference range.
+            c_start (int): Start of the candidate range.
+            c_end (int): End of the candidate range.
+
+        Returns:
+            float: Fraction of the candidate range overlapped by the reference
+            range.
+        """
         overlap_start = max(r_start, c_start)
         overlap_end = min(r_end, c_end)
         overlap_length = max(0, overlap_end - overlap_start)
@@ -134,6 +172,18 @@ class Evaluator:
     def _check_sources(
         self, data_source: MinimalSource, find_sources: List[MinimalSource]
     ) -> bool:
+        """
+        Checks if the given data_source overlaps with any source in
+        find_sources by at least 5%.
+
+        Args:
+            data_source (MinimalSource): The source to check.
+            find_sources (List[MinimalSource]): List of sources to compare
+            against.
+
+        Returns:
+            bool: True if overlap >= 5% with any source, False otherwise.
+        """
         for f in find_sources:
             if f.file_path == data_source.file_path:
                 overlap = self._check_overlap(
@@ -151,6 +201,16 @@ class Evaluator:
         data_sources: List[MinimalSource],
         student_sources: List[MinimalSource],
     ) -> float:
+        """
+        Calculate recall score for student sources.
+
+        Args:
+            data_sources (List[MinimalSource]): Reference sources.
+            student_sources (List[MinimalSource]): Sources to evaluate.
+
+        Returns:
+            float: Recall score (0.0-1.0).
+        """
         if not data_sources:
             return 1
 
@@ -162,6 +222,15 @@ class Evaluator:
         return found / len(data_sources)
 
     def evaluate(self, k: int) -> None:
+        """
+        Evaluates recall at various cutoffs for compared questions.
+
+        Args:
+            k (int): Maximum cutoff value for recall evaluation.
+
+        Returns:
+            None
+        """
         if not self.compared:
             return
 
