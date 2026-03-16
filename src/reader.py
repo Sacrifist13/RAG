@@ -78,7 +78,7 @@ class Reader:
         if not files:
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas directory is empty: "
-                f"{repo_path.name}{self.RESET}\n",
+                f"{repo_path}{self.RESET}\n",
                 file=sys.stderr,
             )
             return None
@@ -116,7 +116,7 @@ class Reader:
         if not datas_formated:
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas directory is empty: "
-                f"{repo_path.name}{self.RESET}\n",
+                f"{repo_path}{self.RESET}\n",
                 file=sys.stderr,
             )
             return None

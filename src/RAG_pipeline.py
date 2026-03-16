@@ -70,7 +70,7 @@ class RAGPipeline:
         if not repo_path.exists():
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] Datas directory not found: "
-                f"{repo_path.name}{self.RESET}\n",
+                f"{repo_path}{self.RESET}\n",
                 file=sys.stderr,
             )
             return
@@ -157,7 +157,7 @@ class RAGPipeline:
         if save_path.exists() and save_path.is_file():
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] Save directory is a file "
-                f"(expected directory): {save_path.name}{self.RESET}\n",
+                f"(expected directory): {save_path}{self.RESET}\n",
                 file=sys.stderr,
             )
             return
