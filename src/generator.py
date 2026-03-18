@@ -1,8 +1,11 @@
 import sys
 import torch
 from tqdm import tqdm
-from typing import List, Dict
-from transformers import AutoModelForCausalLM, AutoTokenizer
+from typing import List, Dict, Any
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+)
 from .models import MinimalSource, MinimalSearchResults, MinimalAnswer
 
 
@@ -57,6 +60,9 @@ class Generator:
         Returns:
             None
         """
+        self.model: Any = None
+        self.tokenizer: Any = None
+
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(
                 model_name, padding_side="left"
@@ -161,8 +167,8 @@ class Generator:
             )
 
             if "</think>" in raw_answer:
-                return str(raw_answer.split("</think>")[-1].strip())
-            return str(raw_answer.strip())
+                return str(str(raw_answer).split("</think>")[-1].strip())
+            return str(str(raw_answer).strip())
 
         except Exception as e:
             print(
@@ -229,14 +235,14 @@ class Generator:
                     )
 
                     if "</think>" in raw:
-                        raw = raw.split("</think>")[-1].strip()
+                        raw = str(raw).split("</think>")[-1].strip()
 
                     all_answers.append(
                         MinimalAnswer(
                             question_id=data.question_id,
                             question=data.question,
                             retrieved_sources=data.retrieved_sources,
-                            answer=raw.strip(),
+                            answer=str(raw).strip(),
                         )
                     )
 
