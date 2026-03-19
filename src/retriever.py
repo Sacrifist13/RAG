@@ -1,6 +1,8 @@
 import sys
 import json
 import bm25s
+import chromadb
+from chromadb.utils import embedding_functions
 from pathlib import Path
 from typing import List
 from .reader import MinimalSource
@@ -39,7 +41,6 @@ class Retriever:
             Prints error and sets self.sources to None if files are missing or
             loading fails.
         """
-        chunks_path = Path("data/processed/chunks/sources.json")
         index_dir = Path("data/processed/bm25_index")
 
         if not index_dir.exists():
@@ -52,24 +53,34 @@ class Retriever:
             )
             self.sources = None
             return
-
-        if not chunks_path.exists():
-            print(
-                f"\n{self.RED}{self.BOLD}❌ [ERROR] Chunks file not found: "
-                f"{chunks_path}{self.RESET}\n\n",
-                f"{self.YELLOW} - Run: index command to create index "
-                f"directory and chunks datas{self.RESET}",
-                file=sys.stderr,
-            )
-            self.sources = None
-            return
-
         try:
-            with open(chunks_path, "r", encoding="utf-8") as f:
-                raw_dicts = json.load(f)
-
-            self.sources = [MinimalSource(**c) for c in raw_dicts]
             self.retriever = bm25s.BM25.load(index_dir, load_corpus=False)
+
+            self.client = chromadb.PersistentClient(
+                path="data/processed/chroma_index"
+            )
+            self.collection = self.client.get_collection(
+                name="chunks",
+                embedding_function=(
+                    embedding_functions.SentenceTransformerEmbeddingFunction(
+                        model_name="paraphrase-MiniLM-L3-v2"
+                    )
+                ),
+            )
+
+            results = self.collection.get()  # récupère tout
+
+            self.sources = [
+                MinimalSource(
+                    file_path=meta["file_path"],
+                    first_character_index=meta["first_character_index"],
+                    last_character_index=meta["last_character_index"],
+                    content=doc,
+                )
+                for meta, doc in zip(
+                    results["metadatas"], results["documents"]
+                )
+            ]
 
         except Exception as e:
             print(
@@ -99,3 +110,16 @@ class Retriever:
         )[0]
 
         return list(documents[0])
+
+    def check_chroma(self) -> None:
+        count = self.collection.count()
+        print(f"ChromaDB chunks stored: {count}")
+
+        if count == 0:
+            print("⚠️ Collection is empty — run index first")
+            return
+
+        sample = self.collection.peek(limit=1)
+        print(f"Sample id      : {sample['ids'][0]}")
+        print(f"Sample document: {sample['documents'][0][:100]}...")
+        print(f"Sample metadata: {sample['metadatas'][0]}")

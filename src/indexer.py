@@ -1,5 +1,6 @@
 import bm25s
-import json
+import chromadb
+from chromadb.utils import embedding_functions
 from pathlib import Path
 from typing import List
 from .reader import MinimalSource
@@ -20,24 +21,39 @@ class Indexer:
     Returns:
         None
     """
+
+    def __init__(self) -> None:
+        self.client = chromadb.PersistentClient(
+            path="data/processed/chroma_index"
+        )
+        self.collection = self.client.get_or_create_collection(
+            name="chunks",
+            embedding_function=(
+                embedding_functions.SentenceTransformerEmbeddingFunction(
+                    model_name="paraphrase-MiniLM-L3-v2"
+                )
+            ),
+        )
+
     def index_save(self, sources: List[MinimalSource]) -> None:
-        chunks_dir = Path("data/processed/chunks")
         index_dir = Path("data/processed/bm25_index")
+        index_dir.mkdir(parents=True, exist_ok=True)
 
-        contents = []
-        chunks = []
-
-        for s in sources:
-            contents.append(s.content)
-            chunks.append(s.model_dump(mode="json"))
-
-        chunks_dir.mkdir(parents=True, exist_ok=True)
-        file_path = chunks_dir / "sources.json"
-
-        with open(file_path, "w", encoding="utf-8") as f:
-            json.dump(chunks, f, indent=4)
-
+        contents = [s.content for s in sources]
         contents_tokens = bm25s.tokenize(contents, stopwords="en")
         retriever = bm25s.BM25()
         retriever.index(contents_tokens)
         retriever.save(index_dir)
+
+        self.collection.add(
+            ids=[str(i) for i in range(len(sources))],
+            documents=contents,
+            metadatas=[
+                {
+                    "file_path": s.file_path,
+                    "first_character_index": s.first_character_index,
+                    "last_character_index": s.last_character_index,
+                }
+                for s in sources
+            ],
+        )
