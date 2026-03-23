@@ -29,5 +29,5 @@ clean:
 
 lint:
 	@echo "$(BOLD)🔎 Running static code analysis...$(RESET)"
-	flake8 --exclude=.venv
-	mypy . --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --exclude=.venv
+	flake8 src
+	mypy src --warn-return-any --warn-unused-ignores --ignore-missing-imports --disallow-untyped-defs --check-untyped-defs --exclude=.venv

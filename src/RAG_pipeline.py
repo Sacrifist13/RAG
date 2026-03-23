@@ -117,7 +117,10 @@ class RAGPipeline:
 
     def search_dataset(
         self,
-        dataset_path: str = "datasets_public/public/UnansweredQuestions/dataset_code_public.json",
+        dataset_path: str = (
+            "datasets_public/public/"
+            "UnansweredQuestions/dataset_code_public.json"
+        ),
         k: int = 10,
         save_directory: str = "data/output/search_results",
     ) -> None:
@@ -177,8 +180,6 @@ class RAGPipeline:
             return
 
         retriever = Retriever()
-
-        retriever.check_chroma()
 
         if not retriever.sources:
             return

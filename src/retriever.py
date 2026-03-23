@@ -1,32 +1,14 @@
 import sys
-import json
 import bm25s
 import chromadb
 from chromadb.utils import embedding_functions
 from pathlib import Path
-from typing import List
+from typing import List, Any
 from .reader import MinimalSource
 
 
 class Retriever:
-    """
-    Retriever loads sources and BM25 index for document retrieval.
-
-    Attributes:
-        sources (list[MinimalSource] | None): Loaded document sources.
-        retriever (bm25s.BM25): BM25 retriever instance.
-
-    Methods:
-        retrieve(query: str, k: int) -> list[MinimalSource] | None:
-            Retrieve top-k relevant sources for a given query.
-
-    Args:
-        query (str): Query string to search for.
-        k (int): Number of top results to return.
-
-    Returns:
-        list[MinimalSource] | None: Top-k sources or None if not loaded.
-    """
+    """Loads BM25 and ChromaDB indexes for hybrid document retrieval."""
 
     RED = "\033[91m"
     BOLD = "\033[1m"
@@ -35,11 +17,10 @@ class Retriever:
 
     def __init__(self) -> None:
         """
-        Initializes the retriever by loading sources and BM25 index.
+        Initialize BM25 and ChromaDB indexes.
 
-        Raises:
-            Prints error and sets self.sources to None if files are missing or
-            loading fails.
+        Sets self.sources to None if indexes are missing or loading fails.
+        Run the index command first to create the required indexes.
         """
         index_dir = Path("data/processed/bm25_index")
 
@@ -90,23 +71,80 @@ class Retriever:
             self.sources = None
             return
 
-    def retrieve(self, query: str, k: int) -> List[MinimalSource] | None:
+    def _rrf_fusion(
+        self,
+        bm25_results: List[Any],
+        chroma_results: List[Any],
+        k: int,
+        rrf_k: int,
+    ):
         """
-        Retrieve top-k relevant MinimalSource objects for a given query.
+        Merge BM25 and ChromaDB results using Reciprocal Rank Fusion.
 
         Args:
-            query (str): The search query.
-            k (int): Number of top results to return.
+            bm25_results: Ranked results from BM25.
+            chroma_results: Ranked results from ChromaDB.
+            k: Number of top results to return.
+            rrf_k: RRF constant controlling rank smoothing (default 60).
 
         Returns:
-            list[MinimalSource] | None: Top-k sources or None if no sources.
+            Top-k sources ranked by combined RRF score.
+        """
+
+        scores: dict = {}
+        index_map: dict = {}
+
+        for rank, source in enumerate(bm25_results):
+            key = f"{source.file_path}_{source.first_character_index}"
+            scores[key] = scores.get(key, 0) + 1 / (rrf_k + rank + 1)
+            index_map[key] = source
+
+        for rank, source in enumerate(chroma_results):
+            key = f"{source.file_path}_{source.first_character_index}"
+            scores[key] = scores.get(key, 0) + 1 / (rrf_k + rank + 1)
+            index_map[key] = source
+
+        sorted_keys = sorted(scores, key=lambda x: scores[x], reverse=True)
+
+        return [index_map[key] for key in sorted_keys[:k]]
+
+    def retrieve(self, query: str, k: int) -> List[MinimalSource] | None:
+        """
+        Retrieve top-k sources using hybrid BM25 and semantic search.
+
+        Args:
+            query: The search query string.
+            k: Number of top results to return.
+
+        Returns:
+            Top-k MinimalSource objects or None if indexes not loaded.
         """
         if self.sources is None:
             return None
 
         query_tokens = bm25s.tokenize(query, stopwords="en")
-        documents = self.retriever.retrieve(
+        bm25_docs = self.retriever.retrieve(
             query_tokens, corpus=self.sources, k=k
-        )[0]
+        )[0][0]
 
-        return list(documents[0])
+        bm25_results = list(bm25_docs)
+
+        chroma_raw = self.collection.query(
+            query_texts=[query],
+            n_results=k,
+        )
+
+        chroma_results = [
+            MinimalSource(
+                file_path=meta["file_path"],
+                first_character_index=meta["first_character_index"],
+                last_character_index=meta["last_character_index"],
+                content=doc,
+            )
+            for meta, doc in zip(
+                chroma_raw["metadatas"][0],
+                chroma_raw["documents"][0],
+            )
+        ]
+
+        return self._rrf_fusion(bm25_results, chroma_results, k, 60)

@@ -9,22 +9,11 @@ from .reader import MinimalSource
 
 
 class Indexer:
-    """
-    Indexer class for saving and indexing document sources.
-
-    Methods
-    -------
-    index_save(sources: List[MinimalSource]) -> None
-        Save sources as JSON and build BM25 index.
-
-    Args:
-        sources (List[MinimalSource]): List of source objects to index.
-
-    Returns:
-        None
-    """
+    """Builds BM25 and ChromaDB indexes from document sources."""
 
     def __init__(self) -> None:
+        """Initialize ChromaDB persistent client and collection."""
+
         self.client = chromadb.PersistentClient(
             path="data/processed/chroma_index"
         )
@@ -38,6 +27,17 @@ class Indexer:
         )
 
     def index_save(self, sources: List[MinimalSource]) -> None:
+        """
+        Index sources into BM25 and ChromaDB.
+
+        Encodes document content using SentenceTransformer and stores
+        embeddings with metadata in ChromaDB. Also builds and saves
+        a BM25 index for lexical search.
+
+        Args:
+            sources: List of MinimalSource objects to index.
+        """
+
         index_dir = Path("data/processed/bm25_index")
 
         index_dir.mkdir(parents=True, exist_ok=True)
