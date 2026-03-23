@@ -77,7 +77,7 @@ class Retriever:
         chroma_results: List[Any],
         k: int,
         rrf_k: int,
-    ):
+    ) -> List[MinimalSource]:
         """
         Merge BM25 and ChromaDB results using Reciprocal Rank Fusion.
 
