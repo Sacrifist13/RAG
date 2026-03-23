@@ -54,6 +54,13 @@ class RAGPipeline:
     YELLOW = "\033[93m"
     RESET = "\033[0m"
 
+    def __init__(self) -> None:
+        self.valid_model: List[str] = [
+            "Qwen/Qwen3-0.6B",
+            "Qwen/Qwen2.5-0.5B-Instruct",
+            "Qwen/Qwen2.5-1.5B-Instruct",
+        ]
+
     def index(self, max_chunk_size: int = 2000) -> None:
         """
         Indexes and saves processed data from the raw data directory.
@@ -221,7 +228,9 @@ class RAGPipeline:
         print(f"Saved student_search_results to {file_path}")
         return
 
-    def answer(self, query: str, k: int = 10) -> None:
+    def answer(
+        self, query: str, k: int = 10, model: str = "Qwen/Qwen3-0.6B"
+    ) -> None:
         """
         Answers a query using retrieved sources and a language model.
 
@@ -239,7 +248,18 @@ class RAGPipeline:
         if not best_sources:
             return
 
-        llm = Generator()
+        if model not in self.valid_model:
+            supported_list = "\n".join([f"  - {m}" for m in self.valid_model])
+
+            print(
+                f"\n{self.RED}{self.BOLD}❌ [ERROR] Model name unknown: "
+                f"'{model}'{self.RESET}\nAvailable models:{self.RESET}\n"
+                f"{self.YELLOW}{supported_list}{self.RESET}\n",
+                file=sys.stderr,
+            )
+            return
+
+        llm = Generator(model_name=model)
         raw_answer = llm.generate(query, best_sources)
 
         if not raw_answer:
@@ -257,6 +277,7 @@ class RAGPipeline:
             "data/output/search_results/dataset_code_public.json"
         ),
         save_directory: str = "data/output/search_results_and_answer",
+        model: str = "Qwen/Qwen3-0.6B",
     ) -> None:
         """
         Answers a dataset using LLM and saves results to a directory.
@@ -301,7 +322,21 @@ class RAGPipeline:
                 search_results_datas = StudentSearchResults(**json_data)
 
             search_results_answers: List[MinimalAnswer] | None = []
-            llm = Generator()
+
+            if model not in self.valid_model:
+                supported_list = "\n".join(
+                    [f"  - {m}" for m in self.valid_model]
+                )
+
+                print(
+                    f"\n{self.RED}{self.BOLD}❌ [ERROR] Model name unknown: "
+                    f"'{model}'{self.RESET}\nAvailable models:{self.RESET}\n"
+                    f"{self.YELLOW}{supported_list}{self.RESET}\n",
+                    file=sys.stderr,
+                )
+                return
+
+            llm = Generator(model_name=model)
 
             search_results_answers = llm.generate_batch(
                 search_results_datas.search_results

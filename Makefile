@@ -24,7 +24,7 @@ debug:
 
 clean:
 	@echo "$(BOLD)🗑️  Cleaning up cache...$(RESET)"
-	rm -rf .mypy_cache __pycache__ src/__pycache__ data/processed data/output
+	rm -rf .mypy_cache __pycache__ src/__pycache__
 	@echo "$(BOLD)$(GREEN)🧹 Cache is clean.$(RESET)"
 
 lint:
