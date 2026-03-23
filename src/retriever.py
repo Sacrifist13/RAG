@@ -68,7 +68,7 @@ class Retriever:
                 ),
             )
 
-            results = self.collection.get()  # récupère tout
+            results = self.collection.get()
 
             self.sources = [
                 MinimalSource(
@@ -110,16 +110,3 @@ class Retriever:
         )[0]
 
         return list(documents[0])
-
-    def check_chroma(self) -> None:
-        count = self.collection.count()
-        print(f"ChromaDB chunks stored: {count}")
-
-        if count == 0:
-            print("⚠️ Collection is empty — run index first")
-            return
-
-        sample = self.collection.peek(limit=1)
-        print(f"Sample id      : {sample['ids'][0]}")
-        print(f"Sample document: {sample['documents'][0][:100]}...")
-        print(f"Sample metadata: {sample['metadatas'][0]}")
