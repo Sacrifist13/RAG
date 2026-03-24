@@ -221,16 +221,21 @@ class Evaluator:
 
         return found / len(data_sources)
 
-    def evaluate(self, k: int) -> None:
+    def evaluate(self, k: int, bonus: bool) -> None:
         """
-        Evaluates recall at various cutoffs for compared questions.
+        Evaluates recall and optionally precision at various cutoffs for
+        compared questions.
 
         Args:
-            k (int): Maximum cutoff value for recall evaluation.
+            k (int): Maximum cutoff value for evaluation metrics
+            (e.g., Recall@k, Precision@k).
+            bonus (bool): If True, calculates and prints Precision@k alongside
+            recall.
 
         Returns:
             None
         """
+
         if not self.compared:
             return
 
@@ -247,5 +252,23 @@ class Evaluator:
                 ][:c]
                 data_sources: List[MinimalSource] = self.compared[q]["data"]
                 scores.append(self._recall(data_sources, student_sources))
-            moyenne = sum(scores) / len(scores)
-            print(f"Recall@{c}: {moyenne:.3f}")
+            mean_recall = sum(scores) / len(scores)
+            print(f"Recall@{c}: {mean_recall:.3f}")
+
+        if bonus:
+            for c in [1, 3, 5, k]:
+                precisions = []
+                for q in self.compared.keys():
+                    student_top_k = self.compared[q]["student"][:c]
+                    data_sources = self.compared[q]["data"]
+
+                    found = sum(
+                        1
+                        for s in student_top_k
+                        if self._check_sources(s, data_sources)
+                    )
+                    precisions.append(found / c)
+
+                print(
+                    f"Precision@{c}: {sum(precisions) / len(precisions):.3f}"
+                )

@@ -375,6 +375,7 @@ class RAGPipeline:
         dataset_path: str,
         k: int = 10,
         max_context_length: int = 2000,
+        bonus: bool = False,
     ) -> None:
         """
         Evaluates student answers using the Evaluator class.
@@ -396,4 +397,4 @@ class RAGPipeline:
         if not evaluator.compared:
             return
 
-        evaluator.evaluate(k)
+        evaluator.evaluate(k, bonus)
