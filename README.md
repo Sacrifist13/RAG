@@ -12,7 +12,8 @@
 7. [Design Decisions](#design-decisions)
 8. [Challenges Faced](#challenges-faced)
 9. [Instructions & Example Usage](#instructions--example-usage)
-10. [Resources](#resources)
+10. [Bonus](#bonus)
+11. [Resources](#resources)
 
 </details>
 
@@ -155,6 +156,16 @@ The project is managed via the `uv` package manager and executed via a python mo
     uv run python -m src evaluate --student_answer_path data/output/search_results/dataset_code_public.json --dataset_path datasets_public/public/AnsweredQuestions/dataset_code_public.json
 
 ---
+
+## Bonus Features
+
+This project goes beyond the mandatory requirements by successfully implementing several bonus features to enhance reliability, performance, and analytical depth:
+
+* **Advanced Retrieving Strategies (Hybrid Search)**: The retrieval engine abandons naive keyword matching in favor of a robust hybrid search pipeline. It concurrently utilizes sparse lexical search (`bm25s`) and dense semantic vector search (`ChromaDB` backed by the `paraphrase-MiniLM-L3-v2` embedding model). The retrieved documents from both methods are merged and optimally ranked using the Reciprocal Rank Fusion (RRF) algorithm.
+* **Support for Multiple LLM Models**: The `Generator` class architecture is model-agnostic, utilizing `AutoModelForCausalLM` and `apply_chat_template`. It includes a strict whitelist of validated models, allowing users to switch from the default `Qwen/Qwen3-0.6B` to more advanced models like `Qwen/Qwen2.5-3B-Instruct`.
+* **Additional Evaluation Metrics**: In addition to the mandatory `Recall@k`, the `Evaluator` class implements **Precision@k** (accessible via the `bonus=True` flag). This metric measures the exactitude of the retrieval engine and the signal-to-noise ratio, ensuring the LLM's context window isn't polluted by irrelevant chunks.
+* **Performance Optimizations (Batching)**: The LLM generation pipeline features a custom `generate_batch` method. It processes incoming search results in parallel chunks with dynamic padding and truncation. This drastically reduces the total inference time required to answer large evaluation datasets.
+* **Enhanced Chunking Strategies**: Moving beyond naive character-level splitting, the `Reader` utilizes context-aware `langchain` splitters (`Language.PYTHON` and `Language.MARKDOWN`). This ensures that structural integrity (like function scopes, classes, and paragraph headers) remains intact during ingestion, significantly improving retrieval relevance.
 
 ## Resources
 
