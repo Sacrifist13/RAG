@@ -155,7 +155,7 @@ class Generator:
             with torch.no_grad():
                 output_ids = self.model.generate(
                     **inputs,
-                    max_new_tokens=512,
+                    max_new_tokens=50,
                     do_sample=False,
                     pad_token_id=self.tokenizer.pad_token_id,
                 )
@@ -221,7 +221,7 @@ class Generator:
                 with torch.no_grad():
                     output_ids = self.model.generate(
                         **inputs,
-                        max_new_tokens=128,
+                        max_new_tokens=50,
                         do_sample=False,
                         pad_token_id=self.tokenizer.pad_token_id,
                     )
