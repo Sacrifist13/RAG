@@ -71,6 +71,8 @@ class RAGPipeline:
         Returns:
             None
         """
+        if max_chunk_size > 2000:
+            max_chunk_size = 2000
 
         repo_path = Path("data/raw")
 

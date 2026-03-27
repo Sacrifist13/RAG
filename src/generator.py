@@ -71,9 +71,7 @@ class Generator:
                 self.tokenizer.pad_token_id = self.tokenizer.eos_token_id
 
             self.model = AutoModelForCausalLM.from_pretrained(
-                model_name,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
+                model_name, dtype=torch.float32, device_map="auto"
             )
             self.model.eval()
 
@@ -195,8 +193,8 @@ class Generator:
 
         all_answers: List[MinimalAnswer] = []
 
-        for i in tqdm(range(0, len(datas), 2), desc="Processing answers"):
-            chunk = datas[i: i + 2]
+        for i in tqdm(range(0, len(datas), 10), desc="Processing answers"):
+            chunk = datas[i: i + 10]
 
             try:
                 texts = [
@@ -216,9 +214,9 @@ class Generator:
                     return_tensors="pt",
                     padding=True,
                     truncation=True,
-                    max_length=1024,
+                    max_length=400,
                 )
-                with torch.no_grad():
+                with torch.inference_mode():
                     output_ids = self.model.generate(
                         **inputs,
                         max_new_tokens=50,
