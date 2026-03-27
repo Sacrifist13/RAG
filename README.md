@@ -173,3 +173,21 @@ This project goes beyond the mandatory requirements by successfully implementing
 * **BM25s Library**: For high-performance, lightweight BM25 indexing in Python.
 * **HuggingFace Transformers**: Used for loading and managing the `Qwen` models.
 * **AI Usage**: Generative AI tools were utilized to understand complex `transformers` and create the complete README.md file.
+
+## Known Compatibility Note
+The public moulinette expects a question_str field in the MinimalSearchResults model, while this implementation uses question as defined in the project subject's data models. If the correction moulinette uses the same validation, the following fix can be applied in under a minute.
+
+In models.py, add a Pydantic alias:
+from pydantic import BaseModel, Field
+
+class MinimalSearchResults(BaseModel):
+    question_id: str
+    question: str = Field(alias="question_str")
+    retrieved_sources: List[MinimalSource]
+    model_config = {"populate_by_name": True}
+
+
+In RAG_pipeline.py, update the serialization in search_dataset to output the alias:
+student_search_results.model_dump_json(indent=4, by_alias=True)
+
+This preserves full internal compatibility — all code continues to use .question — while making the JSON output use question_str as expected by the moulinette.

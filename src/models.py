@@ -16,6 +16,7 @@ class MinimalSource(BaseModel):
     Returns:
         MinimalSource: Instance with file and content info.
     """
+
     file_path: str = Field(min_length=1)
     first_character_index: int = Field(ge=0)
     last_character_index: int = Field(ge=0)
@@ -34,6 +35,7 @@ class MinimalSearchResults(BaseModel):
     Returns:
         MinimalSearchResults: Model instance with search results.
     """
+
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question: str = Field(min_length=1)
     retrieved_sources: List[MinimalSource]
@@ -49,6 +51,7 @@ class MinimalAnswer(MinimalSearchResults):
     Returns:
         MinimalAnswer: An object with search results and an answer.
     """
+
     answer: str
 
 
@@ -63,6 +66,7 @@ class StudentSearchResults(BaseModel):
     Returns:
         StudentSearchResults: Model with search results and k value.
     """
+
     search_results: List[MinimalSearchResults] = Field(min_length=1)
     k: int = Field(ge=1)
 
@@ -77,6 +81,7 @@ class StudentSearchResultsAndAnswer(StudentSearchResults):
     Returns:
         StudentSearchResultsAndAnswer: Instance with search results.
     """
+
     search_results: List[MinimalAnswer]  # type: ignore[assignment]
 
 
@@ -91,6 +96,7 @@ class UnansweredQuestion(BaseModel):
     Returns:
         UnansweredQuestion: Instance with question details.
     """
+
     question_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     question: str
 
@@ -106,6 +112,7 @@ class AnsweredQuestion(UnansweredQuestion):
     Returns:
         AnsweredQuestion: An answered question with sources.
     """
+
     sources: List[MinimalSource]
     answer: str
 
@@ -121,4 +128,5 @@ class RagDataset(BaseModel):
     Returns:
         RagDataset: Instance containing the questions.
     """
+
     rag_questions: List[AnsweredQuestion | UnansweredQuestion]
