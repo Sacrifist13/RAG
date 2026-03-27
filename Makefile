@@ -4,7 +4,7 @@ BOLD   := \033[1m
 RESET  := \033[0m
 GREEN  := \033[32m
 
-.PHONY: all install run debug clean lint lint-strict
+.PHONY: all install run debug clean lint
 
 all: install run
 

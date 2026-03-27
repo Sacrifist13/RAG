@@ -49,7 +49,7 @@ class Evaluator:
         self.compared: Dict[str, Dict[str, List[MinimalSource]]] | None = {}
 
         valid: bool = True
-        non_valid = 0
+        no_valid: int = 0
 
         student_path = Path(student_answer_path)
         data_path = Path(dataset_path)
@@ -99,10 +99,10 @@ class Evaluator:
                     for sources in search_results.retrieved_sources:
                         if len(sources.content) > max_context_length:
                             valid = False
-                            non_valid += 1
+                            no_valid += 1
                 if not valid:
                     print(
-                        f"Student data is valid: False ({non_valid} non valid "
+                        f"Student data is valid: False ({no_valid} non valid "
                         "datas)"
                     )
                 else:
