@@ -138,6 +138,13 @@ class Evaluator:
                 f"{len(self.compared)}\n"
             )
 
+            if len(self.compared) == 0:
+                print(
+                    f"\n{self.RED}{self.BOLD}❌ [ERROR] Can not evaluate"
+                    f" 0 questions with student sources{self.RESET}\n",
+                    file=sys.stderr,
+                )
+
         except Exception as e:
             print(
                 f"\n{self.RED}{self.BOLD}❌ [ERROR] {e}{self.RESET}\n",
