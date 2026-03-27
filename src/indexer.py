@@ -60,11 +60,11 @@ class Indexer:
         for i in tqdm(
             range(0, len(sources), batch_size), desc="Indexing ChromaDB"
         ):
-            batch = sources[i : i + batch_size]
+            batch = sources[i: i + batch_size]
             self.collection.add(
                 ids=[str(j) for j in range(i, i + len(batch))],
                 documents=[s.content for s in batch],
-                embeddings=embeddings[i : i + len(batch)].tolist(),
+                embeddings=embeddings[i: i + len(batch)].tolist(),
                 metadatas=[
                     {
                         "file_path": s.file_path,
