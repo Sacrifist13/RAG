@@ -38,7 +38,7 @@ class Retriever:
             self.retriever = bm25s.BM25.load(index_dir, load_corpus=False)
 
             self.client = chromadb.PersistentClient(
-                path="data/processed/chroma_index"
+                path="data/processed/chunks"
             )
             self.collection = self.client.get_collection(
                 name="chunks",
